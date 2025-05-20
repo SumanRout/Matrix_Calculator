@@ -1,0 +1,215 @@
+.model small
+.stack 100h
+.data
+    ; 2x2 matrix
+    a dw 2
+    b dw 3
+    c dw 1
+    d dw 4
+
+    det dw ?
+
+    newline db 13, 10, '$'
+    msgMatrix db 'Original Matrix:', 13, 10, '$'
+    msgTranspose db 'Transpose:', 13, 10, '$'
+    msgDet db 'Determinant: $'
+    msgInverse db 'Inverse Matrix (Fractional Form):', 13, 10, '$'
+    msgInvalid db 'Determinant is 0. Inverse does not exist.$'
+
+.code
+main:
+    mov ax, @data
+    mov ds, ax
+
+    ; Display original matrix
+    lea dx, msgMatrix
+    call print_string
+    call show_matrix
+
+    ; Display transpose
+    lea dx, msgTranspose
+    call print_string
+    call show_transpose
+
+    ; Compute determinant = a*d - b*c
+    mov ax, a
+    imul d
+    mov si, ax
+
+    mov ax, b
+    imul c
+    sub si, ax
+    mov det, si
+
+    ; Print determinant
+    lea dx, msgDet
+    call print_string
+    mov ax, det
+    call print_number
+    call newline_fn
+
+    cmp det, 0
+    je no_inverse
+
+    ; Show inverse in fractional form
+    lea dx, msgInverse
+    call print_string
+
+    ; Row 1:  d/det  , -b/det
+    mov ax, d
+    mov bx, det
+    call print_fraction
+    mov dl, ' '
+    call print_char
+
+    mov ax, b
+    neg ax
+    mov bx, det
+    call print_fraction
+    call newline_fn
+
+    ; Row 2:  -c/det ,  a/det
+    mov ax, c
+    neg ax
+    mov bx, det
+    call print_fraction
+    mov dl, ' '
+    call print_char
+
+    mov ax, a
+    mov bx, det
+    call print_fraction
+    call newline_fn
+
+    jmp exit
+
+no_inverse:
+    lea dx, msgInvalid
+    call print_string
+
+exit:
+    mov ah, 4ch
+    int 21h
+
+; ---------------------------
+; Subroutines
+; ---------------------------
+
+show_matrix:
+    mov ax, a
+    call print_number
+    mov dl, ' '
+    call print_char
+    mov ax, b
+    call print_number
+    call newline_fn
+
+    mov ax, c
+    call print_number
+    mov dl, ' '
+    call print_char
+    mov ax, d
+    call print_number
+    call newline_fn
+    ret
+
+show_transpose:
+    mov ax, a
+    call print_number
+    mov dl, ' '
+    call print_char
+    mov ax, c
+    call print_number
+    call newline_fn
+
+    mov ax, b
+    call print_number
+    mov dl, ' '
+    call print_char
+    mov ax, d
+    call print_number
+    call newline_fn
+    ret
+
+print_string:
+    mov ah, 09h
+    int 21h
+    ret
+
+print_char:
+    mov ah, 02h
+    int 21h
+    ret
+
+newline_fn:
+    lea dx, newline
+    call print_string
+    ret
+
+; Print signed integer in AX
+print_number:
+    pusha
+    cmp ax, 0
+    jge print_positive
+    mov dl, '-'
+    call print_char
+    neg ax
+
+print_positive:
+    xor cx, cx
+.next_digit:
+    xor dx, dx
+    mov bx, 10
+    div bx
+    push dx
+    inc cx
+    test ax, ax
+    jnz .next_digit
+
+.print_loop:
+    pop dx
+    add dl, '0'
+    call print_char
+    loop .print_loop
+
+    popa
+    ret
+
+; Prints AX/BX as a fraction with sign handling
+print_fraction:
+    pusha
+    ; backup numerator & denominator
+    mov si, ax
+    mov di, bx
+
+    ; handle sign
+    xor bp, bp
+    cmp si, 0
+    jge skip_num_sign
+    inc bp
+    neg si
+skip_num_sign:
+    cmp di, 0
+    jge skip_den_sign
+    inc bp
+    neg di
+skip_den_sign:
+    ; if only one is negative, print -
+    test bp, 1
+    jz no_sign
+    mov dl, '-'
+    call print_char
+no_sign:
+    mov ax, si
+    call print_number
+
+    mov dl, '/'
+    call print_char
+
+    mov ax, di
+    call print_number
+
+    popa
+    ret
+
+end main
