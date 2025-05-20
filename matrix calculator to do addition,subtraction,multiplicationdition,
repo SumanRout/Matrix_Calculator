@@ -1,0 +1,174 @@
+.DATA
+ MatrixA DW 1, 2, 3, 4
+ MatrixB DW 5, 6, 7, 8
+ ResultMatrix DW 4 DUP(0
+ ; Display Messages
+ MsgTitle DB "Matrix Calculator using 8086 Assembly", 0Dh, 0Ah, "$"
+ MsgAddition DB 0Dh, 0Ah, "Matrix Addition Result:", 0Dh, 0Ah, "$"
+ MsgSubtraction DB 0Dh, 0Ah, "Matrix Subtraction Result:", 0Dh, 0Ah, "$"
+ MsgMultiplication DB 0Dh, 0Ah, "Matrix Multiplication Result:", 0Dh, 0Ah, "$"
+ MsgDone DB 0Dh, 0Ah, "Operation complete.", 0Dh, 0Ah, "$"
+.CODE
+MAIN PROC
+ MOV AX, @DATA
+ MOV DS, AX
+ LEA DX, MsgTitle
+ MOV AH, 09h
+ INT 21h
+ LEA DX, MsgAddition
+ MOV AH, 09h
+ INT 21h
+ CALL ClearResultMatrix
+ CALL AddMatrices
+ CALL PrintResultMatrix
+ LEA DX, MsgSubtraction
+ MOV AH, 09h
+ INT 21h
+ CALL ClearResultMatrix
+ CALL Subtract
+ CALL PrintResultMatrix
+ LEA DX, MsgMultiplication
+ MOV AH, 09h
+ INT 21h
+ CALL ClearResultMatrix
+ CALL MultiplyMatrices
+ CALL PrintResultMatrix
+ LEA DX, MsgDone
+ MOV AH, 09h
+ INT 21h
+ HLT
+MAIN ENDP
+;-----------------------------------------------------
+; Matrix Operations
+;-----------------------------------------------------
+AddMatrices PROC
+ MOV CX, 4
+ MOV BX, 0
+Add_Loop:
+ MOV AX, MatrixA[BX]
+ ADD AX, MatrixB[BX]
+ MOV ResultMatrix[BX], AX
+ ADD BX, 2
+ LOOP Add_Loop
+ RET
+AddMatrices ENDP
+SubtractMatrices PROC
+ MOV CX, 4
+ MOV BX, 0
+Sub_Loop:
+ MOV AX, MatrixA[BX]
+ SUB AX, MatrixB[BX]
+ MOV ResultMatrix[BX], AX
+ ADD BX, 2
+ LOOP Sub_Loop
+ RET
+SubtractMatrices ENDP
+MultiplyMatrices PROC
+ ; C11 = A11*B11 + A12*B21
+ MOV AX, MatrixA[0]
+ MOV BX, MatrixB[0]
+ MUL BX
+ MOV SI, AX
+ MOV AX, MatrixA[2]
+ MOV BX, MatrixB[4]
+ MUL BX
+ ADD SI, AX
+ MOV ResultMatrix[0], SI
+ ; C12 = A11*B12 + A12*B22
+ MOV AX, MatrixA[0]
+ MOV BX, MatrixB[2]
+ MUL BX
+ MOV SI, AX
+ MOV AX, MatrixA[2]
+ MOV BX, MatrixB[6]
+ MUL BX
+ ADD SI, AX
+ MOV ResultMatrix[2], SI
+ ; C21 = A21*B11 + A22*B21
+ MOV AX, MatrixA[4]
+ MOV BX, MatrixB[0]
+ MUL BX
+ MOV SI, AX
+ MOV AX, MatrixA[6]
+ MOV BX, MatrixB[4]
+ MUL BX
+ ADD SI, AX
+ MOV ResultMatrix[4], SI
+ ; C22 = A21*B12 + A22*B22
+ MOV AX, MatrixA[4]
+ MOV BX, MatrixB[2]
+ MUL BX
+ MOV SI, AX
+ MOV AX, MatrixA[6]
+ MOV BX, MatrixB[6]
+ MUL BX
+ ADD SI, AX
+ MOV ResultMatrix[6], SI
+ RET
+MultiplyMatrices ENDP
+;-----------------------------------------------------
+; Clear Result Matrix
+;-----------------------------------------------------
+ClearResultMatrix PROC
+ MOV CX, 4
+ MOV BX, 0
+ClearLoop:
+ MOV WORD PTR ResultMatrix[BX], 0
+ ADD BX, 2
+ LOOP ClearLoop
+ RET
+ClearResultMatrix ENDP
+;-----------------------------------------------------
+; Print Result Matrix in Hex Format
+;-----------------------------------------------------
+PrintResultMatrix PROC
+ MOV BX, 0
+ MOV CX, 4
+PrintLoop:
+ MOV AX, ResultMatrix[BX]
+ CALL PrintHexWord
+ MOV DL, ' '
+ MOV AH, 02h
+ INT 21h
+ ADD BX, 2
+ LOOP PrintLoop
+ ; Newline
+ MOV DL, 0Dh
+ MOV AH, 02h
+ INT 21h
+MOV DL, 0Ah
+ MOV AH, 02h
+ INT 21h
+ RET
+PrintResultMatrix ENDP
+PrintHexWord PROC
+ PUSH AX
+ PUSH BX
+ PUSH CX
+ PUSH DX
+ MOV CX, 4
+ MOV BX, AX
+PrintHexLoop:
+ ROL BX, 4
+ MOV DL, BL
+ AND DL, 0Fh
+ CALL PrintHexNibble
+ LOOP PrintHexLoop
+ POP DX
+ POP CX
+ POP BX
+ POP AX
+ RET
+PrintHexWord ENDP
+PrintHexNibble PROC
+ CMP DL, 0Ah
+ JL PrintDigit
+ ADD DL, 7
+PrintDigit:
+ ADD DL, '0'
+ MOV AH, 02h
+ INT 21h
+ RE
+T
+PrintHexNibble ENDP
+END MAIN 
